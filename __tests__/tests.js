@@ -8,8 +8,7 @@ import { Acl, MemoryStore, RedisStore, MongoDBStore, SequelizeStore } from '../s
 jest.setTimeout(10000);
 let mongoClient = null;
 
-// ['Memory', 'MySQL', 'Redis', 'MongoDB'].forEach((store) => {
-['MySQL'].forEach((store) => {
+['Memory', 'MySQL', 'Redis', 'MongoDB'].forEach((store) => {
   let acl = null;
   describe(store, () => {
     beforeAll((done) => {
