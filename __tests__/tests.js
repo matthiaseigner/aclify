@@ -1,14 +1,15 @@
 // @flow
 import Redis from 'redis';
-import {MongoClient} from 'mongodb';
+import { MongoClient } from 'mongodb';
 import Sequelize from 'sequelize';
 import httpMocks from 'node-mocks-http';
-import {Acl, MemoryStore, RedisStore, MongoDBStore, SequelizeStore} from '../src';
+import { Acl, MemoryStore, RedisStore, MongoDBStore, SequelizeStore } from '../src';
 
 jest.setTimeout(10000);
 let mongoClient = null;
 
-['Memory', 'MySQL', 'Redis', 'MongoDB'].forEach((store) => {
+// ['Memory', 'MySQL', 'Redis', 'MongoDB'].forEach((store) => {
+['MySQL'].forEach((store) => {
   let acl = null;
   describe(store, () => {
     beforeAll((done) => {
@@ -16,7 +17,7 @@ let mongoClient = null;
         acl = new Acl(new MemoryStore());
         done();
       } else if (store === 'Redis') {
-        acl = new Acl(new RedisStore(Redis.createClient({host: 'redis'})));
+        acl = new Acl(new RedisStore(Redis.createClient({ host: 'redis' })));
         done();
       } else if (store === 'MongoDB') {
         MongoClient.connect('mongodb://mongo', (err, client) => {
@@ -27,13 +28,13 @@ let mongoClient = null;
       } else if (store === 'MySQL') {
         const sequelize = new Sequelize('aclify', 'root', 'aclify', {
           host: 'mysql',
-          operatorsAliases: {$in: Sequelize.Op.in},
+          operatorsAliases: { $in: Sequelize.Op.in },
           dialect: 'mysql',
           logging: null,
         });
         sequelize.authenticate()
           .then(() => {
-            acl = new Acl(new SequelizeStore(sequelize, {prefix: 'acl_'}));
+            acl = new Acl(new SequelizeStore(sequelize, { prefix: 'acl_' }));
             done();
           });
       }
@@ -81,19 +82,19 @@ let mongoClient = null;
     describe('Allows', () => {
       it('Guest to view blogs', () => {
         acl.allow('guest', 'blogs', 'view', (err) => {
-          expect(!err);
+          expect(err).toBeNull();
         });
       });
 
       it('Guest to view forums', () => {
         acl.allow('guest', 'forums', 'view', (err) => {
-          expect(!err);
+          expect(err).toBeNull();
         });
       });
 
       it('Member to view/edit/delete blogs', () => {
         acl.allow('member', 'blogs', ['edit', 'view', 'delete'], (err) => {
-          expect(!err);
+          expect(err).toBeNull();
         });
       });
     });
@@ -101,16 +102,16 @@ let mongoClient = null;
     describe('Add user roles', () => {
       it('Joed = guest, jsmith = member, harry = admin, test@test.com = member', (done) => {
         acl.addUserRoles('joed', 'guest', (err1) => {
-          expect(!err1);
+          expect(err1).toBeNull();
 
           acl.addUserRoles('jsmith', 'member', (err2) => {
-            expect(!err2);
+            expect(err2).toBeNull();
 
             acl.addUserRoles('harry', 'admin', (err3) => {
-              expect(!err3);
+              expect(err3).toBeNull();
 
               acl.addUserRoles('test@test.com', 'member', (err4) => {
-                expect(!err4);
+                expect(err4).toBeNull();
                 done();
               });
             });
@@ -120,13 +121,13 @@ let mongoClient = null;
 
       it('0 = guest, 1 = member, 2 = admin', (done) => {
         acl.addUserRoles(0, 'guest', (err1) => {
-          expect(!err1);
+          expect(err1).toBeNull();
 
           acl.addUserRoles(1, 'member', (err2) => {
-            expect(!err2);
+            expect(err2).toBeNull();
 
             acl.addUserRoles(2, 'admin', (err3) => {
-              expect(!err3);
+              expect(err3).toBeNull();
               done();
             });
           });
@@ -136,7 +137,7 @@ let mongoClient = null;
 
     describe('Middleware', () => {
       it('Should return 403', (done) => {
-        const request = httpMocks.createRequest({method: 'GET', url: '/blogs'});
+        const request = httpMocks.createRequest({ method: 'GET', url: '/blogs' });
         const response = httpMocks.createResponse();
         acl.middleware(0, 'joed', 'GET')(request, response, (err) => {
           expect(err.name).toEqual('HttpError');
@@ -147,7 +148,7 @@ let mongoClient = null;
       });
 
       it('Should return 401', (done) => {
-        const request = httpMocks.createRequest({method: 'GET', url: '/blogs'});
+        const request = httpMocks.createRequest({ method: 'GET', url: '/blogs' });
         const response = httpMocks.createResponse();
         acl.middleware(0, null, 'GET')(request, response, (err) => {
           expect(err.name).toEqual('HttpError');
@@ -158,14 +159,14 @@ let mongoClient = null;
       });
 
       it('Should return 200', (done) => {
-        const request = httpMocks.createRequest({method: 'POST', url: '/blogs'});
+        const request = httpMocks.createRequest({ method: 'POST', url: '/blogs' });
         const response = httpMocks.createResponse();
         acl.addUserRoles('joed', 'member')
           .then(() => acl.allow('member', '/blogs', ['POST']))
           .then(() => acl.isAllowed('joed', '/blogs', 'POST'))
           .then(() => acl.middleware(0, 'joed', 'POST')(request, response, (err2) => {
             setTimeout(() => {
-              expect(!err2);
+              expect(err2).toBeUndefined();
               expect(response.statusCode).toEqual(200);
               expect(response.statusMessage).toEqual('OK');
               done();
@@ -216,21 +217,21 @@ let mongoClient = null;
   describe('Allow', () => {
     it('Admin view/add/edit/delete users', (done) => {
       acl.allow('admin', 'users', ['add', 'edit', 'view', 'delete'], (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Foo view/edit blogs', (done) => {
       acl.allow('foo', 'blogs', ['edit', 'view'], (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Bar to view/delete blogs', (done) => {
       acl.allow('bar', 'blogs', ['view', 'delete'], (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -239,7 +240,7 @@ let mongoClient = null;
   describe('Add role parents', () => {
     it('Add foot and bar roles into baz parent role', (done) => {
       acl.addRoleParents('baz', ['foo', 'bar'], (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -248,14 +249,14 @@ let mongoClient = null;
   describe('Add user roles', () => {
     it('Add them', (done) => {
       acl.addUserRoles('dimitri', 'baz', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Add them with numeric userId', (done) => {
       acl.addUserRoles(3, 'baz', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -264,7 +265,7 @@ let mongoClient = null;
   describe('allow admin to do anything', () => {
     it('Add them', (done) => {
       acl.allow('admin', ['blogs', 'forums'], '*', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -276,9 +277,9 @@ let mongoClient = null;
         [{
           roles: 'fumanchu',
           allows: [
-            {resources: 'blogs', permissions: 'get'},
-            {resources: ['forums', 'news'], permissions: ['get', 'put', 'delete']},
-            {resources: ['/path/file/file1.txt', '/path/file/file2.txt'], permissions: ['get', 'put', 'delete']},
+            { resources: 'blogs', permissions: 'get' },
+            { resources: ['forums', 'news'], permissions: ['get', 'put', 'delete'] },
+            { resources: ['/path/file/file1.txt', '/path/file/file2.txt'], permissions: ['get', 'put', 'delete'] },
           ],
         }],
         (err) => {
@@ -292,14 +293,14 @@ let mongoClient = null;
   describe('Add fumanchu role to suzanne', () => {
     it('Do it', (done) => {
       acl.addUserRoles('suzanne', 'fumanchu', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Do it (numeric userId)', (done) => {
       acl.addUserRoles(4, 'fumanchu', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -310,161 +311,168 @@ let mongoClient = null;
     describe('IsAllowed', () => {
       it('Can joed view blogs?', (done) => {
         acl.isAllowed('joed', 'blogs', 'view', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can userId=0 view blogs?', (done) => {
         acl.isAllowed(0, 'blogs', 'view', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can joed view forums?', (done) => {
         acl.isAllowed('joed', 'forums', 'view', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can userId=0 view forums?', (done) => {
         acl.isAllowed(0, 'forums', 'view', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can joed edit forums?', (done) => {
         acl.isAllowed('joed', 'forums', 'edit', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can userId=0 edit forums?', (done) => {
         acl.isAllowed(0, 'forums', 'edit', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can jsmith edit forums?', (done) => {
         acl.isAllowed('jsmith', 'forums', 'edit', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can jsmith edit forums?', (done) => {
         acl.isAllowed('jsmith', 'forums', 'edit', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
 
       it('Can jsmith edit blogs?', (done) => {
+        // acl.allUserRoles('jsmith').then((r) => {
+        // acl.allowedPermissions('member', ['blogs'], (p) => {
+        // acl.resourcePermissions(['member'], 'blogs', (p) => {
         acl.isAllowed('jsmith', 'blogs', 'edit', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          // console.log(1111111, r, p, allow);
+          console.log(1212, 'jsmith', 'blogs', 'edit', err, allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
+          done();
+        });
+        //   });
+        // });
+      });
+
+      it('Can test@test.com edit forums?', (done) => {
+        acl.isAllowed('test@test.com', 'forums', 'edit', (err, allow) => {
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can test@test.com edit forums?', (done) => {
         acl.isAllowed('test@test.com', 'forums', 'edit', (err, allow) => {
-          expect(!err);
-          expect(!allow);
-          done();
-        });
-      });
-
-      it('Can test@test.com edit forums?', (done) => {
-        acl.isAllowed('test@test.com', 'forums', 'edit', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can test@test.com edit blogs?', (done) => {
         acl.isAllowed('test@test.com', 'blogs', 'edit', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can userId=1 edit blogs?', (done) => {
         acl.isAllowed(1, 'blogs', 'edit', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can jsmith edit, delete and clone blogs?', (done) => {
         acl.isAllowed('jsmith', 'blogs', ['edit', 'view', 'clone'], (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can test@test.com edit, delete and clone blogs?', (done) => {
         acl.isAllowed('test@test.com', 'blogs', ['edit', 'view', 'clone'], (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can userId=1 edit, delete and clone blogs?', (done) => {
         acl.isAllowed(1, 'blogs', ['edit', 'view', 'clone'], (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can jsmith edit, clone blogs?', (done) => {
         acl.isAllowed('jsmith', 'blogs', ['edit', 'clone'], (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can test@test.com edit, clone blogs?', (done) => {
         acl.isAllowed('test@test.com', 'blogs', ['edit', 'clone'], (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can userId=1 edit, delete blogs?', (done) => {
         acl.isAllowed(1, 'blogs', ['edit', 'clone'], (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can james add blogs?', (done) => {
         acl.isAllowed('dimitri', 'blogs', 'add', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
@@ -472,88 +480,88 @@ let mongoClient = null;
 
       it('Can userId=3 add blogs?', (done) => {
         acl.isAllowed(3, 'blogs', 'add', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can suzanne add blogs?', (done) => {
         acl.isAllowed('suzanne', 'blogs', 'add', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can userId=4 add blogs?', (done) => {
         acl.isAllowed(4, 'blogs', 'add', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can suzanne get blogs?', (done) => {
         acl.isAllowed('suzanne', 'blogs', 'get', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can userId=4 get blogs?', (done) => {
         acl.isAllowed(4, 'blogs', 'get', (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can suzanne delete and put news?', (done) => {
         acl.isAllowed('suzanne', 'news', ['put', 'delete'], (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can userId=4 delete and put news?', (done) => {
         acl.isAllowed(4, 'news', ['put', 'delete'], (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can suzanne delete and put forums?', (done) => {
         acl.isAllowed('suzanne', 'forums', ['put', 'delete'], (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can userId=4 delete and put forums?', (done) => {
         acl.isAllowed(4, 'forums', ['put', 'delete'], (err, allow) => {
-          expect(!err);
-          expect(allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(true);
           done();
         });
       });
 
       it('Can nobody view news?', (done) => {
         acl.isAllowed('nobody', 'blogs', 'view', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
 
       it('Can nobody view nothing?', (done) => {
         acl.isAllowed('nobody', 'nothing', 'view', (err, allow) => {
-          expect(!err);
-          expect(!allow);
+          expect(err).toBeNull();
+          expect(allow).toEqual(false);
           done();
         });
       });
@@ -563,7 +571,7 @@ let mongoClient = null;
   describe('allowedPermissions', () => {
     it('What permissions has james over blogs and forums?', (done) => {
       acl.allowedPermissions('dimitri', ['blogs', 'forums'], (err, permissions) => {
-        expect(!err);
+        expect(err).toBeNull();
         expect(permissions).toHaveProperty('blogs');
         expect(permissions).toHaveProperty('forums');
         expect(permissions.blogs).toContain('edit');
@@ -576,7 +584,7 @@ let mongoClient = null;
 
     it('What permissions has userId=3 over blogs and forums?', (done) => {
       acl.allowedPermissions(3, ['blogs', 'forums'], (err, permissions) => {
-        expect(!err);
+        expect(err).toBeNull();
         expect(permissions).toHaveProperty('blogs');
         expect(permissions).toHaveProperty('forums');
         expect(permissions.blogs).toContain('edit');
@@ -589,9 +597,9 @@ let mongoClient = null;
 
     it('What permissions has nonsenseUser over blogs and forums?', (done) => {
       acl.allowedPermissions('nonsense', ['blogs', 'forums'], (err, permissions) => {
-        expect(!err);
-        expect(!permissions.forums.length);
-        expect(!permissions.blogs.length);
+        expect(err).toBeNull();
+        expect(permissions.forums.length).toEqual(0);
+        expect(permissions.blogs.length).toEqual(0);
         done();
       });
     });
@@ -649,21 +657,21 @@ let mongoClient = null;
   describe('removeAllow', () => {
     it('Remove get permissions from resources blogs and forums from role fumanchu', (done) => {
       acl.removeAllow('fumanchu', ['blogs', 'forums'], 'get', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove delete and put permissions from resource news from role fumanchu', (done) => {
       acl.removeAllow('fumanchu', 'news', 'delete', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove view permissions from resource blogs from role bar', (done) => {
       acl.removeAllow('bar', 'blogs', 'view', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -688,21 +696,21 @@ let mongoClient = null;
   describe('RemoveRole', () => {
     it('Remove role fumanchu', (done) => {
       acl.removeRole('fumanchu', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove role member', (done) => {
       acl.removeRole('member', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove role foo', (done) => {
       acl.removeRole('foo', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -711,16 +719,16 @@ let mongoClient = null;
   describe('Was role removed?', () => {
     it('What resources have "fumanchu" some rights on after removed?', (done) => {
       acl.whatResources('fumanchu', (err, resources) => {
-        expect(!err);
-        expect(!Object.keys(resources).length);
+        expect(err).toBeNull();
+        expect(Object.keys(resources).length).toEqual(0);
         done();
       });
     });
 
     it('What resources have "member" some rights on after removed?', (done) => {
       acl.whatResources('member', (err, resources) => {
-        expect(!err);
-        expect(!Object.keys(resources).length);
+        expect(err).toBeNull();
+        expect(Object.keys(resources).length).toEqual(0);
         done();
       });
     });
@@ -728,25 +736,25 @@ let mongoClient = null;
     describe('Allowed permissions', () => {
       it('What permissions has jsmith over blogs and forums?', (done) => {
         acl.allowedPermissions('jsmith', ['blogs', 'forums'], (err, permissions) => {
-          expect(!err);
-          expect(!permissions.blogs);
-          expect(!permissions.forums);
+          expect(err).toBeNull();
+          expect(permissions.blogs.length).toEqual(0);
+          expect(permissions.forums.length).toEqual(0);
           done();
         });
       });
 
       it('What permissions has test@test.com over blogs and forums?', (done) => {
         acl.allowedPermissions('test@test.com', ['blogs', 'forums'], (err, permissions) => {
-          expect(!err);
-          expect(!permissions.blogs);
-          expect(!permissions.forums);
+          expect(err).toBeNull();
+          expect(permissions.blogs.length).toEqual(0);
+          expect(permissions.forums.length).toEqual(0);
           done();
         });
       });
 
       it('What permissions has james over blogs?', (done) => {
         acl.allowedPermissions('dimitri', 'blogs', (err, permissions) => {
-          expect(!err);
+          expect(err).toBeNull();
           expect(permissions.blogs).toContain('delete');
           done();
         });
@@ -780,14 +788,14 @@ let mongoClient = null;
 
     it('Operation uses a callback when removing a specific parent role', (done) => {
       acl.removeRoleParents('child', 'parentX', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Operation uses a callback when removing multiple specific parent roles', (done) => {
       acl.removeRoleParents('child', ['parentX', 'parentY'], (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -859,7 +867,7 @@ let mongoClient = null;
 
     it('Operation uses a callback when removing all parent roles', (done) => {
       acl.removeRoleParents('child', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -868,14 +876,14 @@ let mongoClient = null;
   describe('RemoveResource', () => {
     it('Remove resource blogs', (done) => {
       acl.removeResource('blogs', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove resource users', (done) => {
       acl.removeResource('users', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -886,7 +894,7 @@ let mongoClient = null;
       acl.allowedPermissions('dimitri', 'blogs', (err, permissions) => {
         expect(err).toBeNull();
         expect(permissions).toHaveProperty('blogs');
-        expect(!permissions.blogs.length);
+        expect(permissions.blogs.length).toEqual(0);
         done();
       });
     });
@@ -895,7 +903,7 @@ let mongoClient = null;
       acl.allowedPermissions(4, 'blogs')
         .then((permissions) => {
           expect(permissions).toHaveProperty('blogs');
-          expect(!permissions.blogs.length);
+          expect(permissions.blogs.length).toEqual(0);
           done();
         });
     });
@@ -904,7 +912,7 @@ let mongoClient = null;
   describe('WhatResources', () => {
     it('What resources have "baz" some rights on after removed blogs?', (done) => {
       acl.whatResources('baz', (err, resources) => {
-        expect(!err);
+        expect(err).toBeNull();
         expect(typeof resources === 'object');
         expect(!Object.keys(resources).length);
         done();
@@ -913,7 +921,7 @@ let mongoClient = null;
 
     it('What resources have "admin" some rights on after removed users resource?', (done) => {
       acl.whatResources('admin', (err, resources) => {
-        expect(!err);
+        expect(err).toBeNull();
         expect(resources).not.toContain('users');
         expect(resources).not.toContain('blogs');
         done();
@@ -924,27 +932,27 @@ let mongoClient = null;
   describe('Remove user roles', () => {
     it('Remove role guest from joed', (done) => {
       acl.removeUserRoles('joed', 'guest', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove role guest from userId=0', (done) => {
       acl.removeUserRoles(0, 'guest', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
     it('Remove role admin from harry', (done) => {
       acl.removeUserRoles('harry', 'admin', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Remove role admin from userId=2', (done) => {
       acl.removeUserRoles(2, 'admin', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
@@ -953,18 +961,18 @@ let mongoClient = null;
   describe('Were roles removed?', () => {
     it('What permissions has harry over forums and blogs?', (done) => {
       acl.allowedPermissions('harry', ['forums', 'blogs'], (err, permissions) => {
-        expect(!err);
+        expect(err).toBeNull();
         expect(typeof permissions === 'object');
-        expect(!permissions.forums.length);
+        expect(permissions.forums.length).toEqual(0);
         done();
       });
     });
 
     it('What permissions has userId=2 over forums and blogs?', (done) => {
       acl.allowedPermissions(2, ['forums', 'blogs'], (err, permissions) => {
-        expect(!err);
+        expect(err).toBeNull();
         expect(typeof permissions === 'object');
-        expect(!permissions.forums.length);
+        expect(permissions.forums.length).toEqual(0);
         done();
       });
     });
@@ -990,17 +998,17 @@ let mongoClient = null;
   describe('Removing a role removes the entire "allows" document.', () => {
     it('Add roles/resources/permissions', (done) => {
       acl.allow(['role1', 'role2', 'role3'], ['res1', 'res2', 'res3'], ['perm1', 'perm2', 'perm3'], (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Add user roles and parent roles', (done) => {
       acl.addUserRoles('user1', 'role1', (err1) => {
-        expect(!err1);
+        expect(err1).toBeNull();
 
         acl.addRoleParents('role1', 'parentRole1', (err2) => {
-          expect(!err2);
+          expect(err2).toBeNull();
           done();
         });
       });
@@ -1008,10 +1016,10 @@ let mongoClient = null;
 
     it('Add user roles and parent roles', (done) => {
       acl.addUserRoles(1, 'role1', (err1) => {
-        expect(!err1);
+        expect(err1).toBeNull();
 
         acl.addRoleParents('role1', 'parentRole1', (err2) => {
-          expect(!err2);
+          expect(err2).toBeNull();
           done();
         });
       });
@@ -1019,11 +1027,11 @@ let mongoClient = null;
 
     it('Verify that roles have permissions as assigned', (done) => {
       acl.whatResources('role1', (err1, res1) => {
-        expect(!err1);
+        expect(err1).toBeNull();
         expect(res1.res1.sort()).toEqual(['perm1', 'perm2', 'perm3']);
 
         acl.whatResources('role2', (err2, res2) => {
-          expect(!err2);
+          expect(err2).toBeNull();
           expect(res2.res1.sort()).toEqual(['perm1', 'perm2', 'perm3']);
           done();
         });
@@ -1032,14 +1040,14 @@ let mongoClient = null;
 
     it('Remove role "role1"', (done) => {
       acl.removeRole('role1', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
         done();
       });
     });
 
     it('Verify that "role1" has no permissions and "role2" has permissions intact', (done) => {
       acl.removeRole('role1', (err) => {
-        expect(!err);
+        expect(err).toBeNull();
 
         acl.whatResources('role1', (err1, res1) => {
           expect(!Object.keys(res1).length);
@@ -1054,7 +1062,7 @@ let mongoClient = null;
 
     it('Remove an user', (done) => {
       acl.removeUser('dimitri', (err1) => {
-        expect(!err1);
+        expect(err1).toBeNull();
         done();
       });
     });
